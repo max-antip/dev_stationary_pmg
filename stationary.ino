@@ -34,21 +34,8 @@ void setup() {
   while (!Serial) {}
 
 
-
-
   bluetooth.write("AT+ADDR?");
   delay(100);
-
-
-  bluetooth.write("AT+POWE3");
-  delay(500);
-  while (bluetooth.available())
-  {
-    Serial.write(bluetooth.read());
-  }
-
-
-  while (!Serial) {}
 
   bluetooth.write("AT+POWE3");
   delay(500);
@@ -132,6 +119,16 @@ void setup() {
 
   }
   Serial.println("");
+  delay(100);
+  Serial.println("");
+  bluetooth.write("AT+MODE1");
+  delay(500);
+  while (bluetooth.available()) {
+    Serial.write(bluetooth.read());
+
+  }
+  Serial.println("");
+  delay(500);
 }
 
 //Depricated
@@ -159,6 +156,9 @@ void setup() {
 
 
 boolean connect(String mac) {
+  if (mac.length() != 12) {
+    return false;
+  }
   String messStr = "AT+CON" + mac;
   char messData[messStr.length() + 1];
   messStr.toCharArray(messData, messStr.length() + 1);
@@ -194,7 +194,7 @@ boolean hasBLEConnected() {
   //    Serial.println("CheckingBLE");
   //  }
   bluetooth.write("AT+PIO1?");
-  delay(300);
+  delay(500);
   while (bluetooth.available())
   {
     String str = bluetooth.readString();
@@ -213,143 +213,147 @@ boolean hasBLEConnected() {
 
 }
 
-static String firstSignalStr = "0";
-static String secondSignalStr = "0";
-static String firstAdr = "";
-static String secondAdr = "";
-
-
+//String firstSignalStr = "0";
+//String secondSignalStr = "0";
+//String firstAdr = "";
+//String secondAdr = "";
+const  String mac = "5CF821F97771";
 void scan() {
   bluetooth.write("AT+DISI?");
-  delay(500);
+  //bluetooth.write("AT+DISC?");
+  delay(1000);
+  String ss;
+
   while (bluetooth.available()) {
-    String scanStr = bluetooth.readString();
-    int firstIdx = scanStr.indexOf(':');
-    int ffdx = firstIdx + 67;
-    int fldx =  ffdx + 4;
-    firstSignalStr = scanStr.substring(ffdx, fldx);
-    firstAdr = scanStr.substring(ffdx - 13, fldx - 5);
-
-    int secondIdx = scanStr.indexOf(':', fldx);
-    int sfdx = secondIdx + 67;
-    int sldx = sfdx + 4;
-    secondSignalStr = scanStr.substring(sfdx, sldx );
-    secondAdr = scanStr.substring(sfdx - 13, sldx - 5);
-    scanStr = "";
-    if (debug) {
-      // Serial.println(scanStr);
-      Serial.print(firstSignalStr.toInt()); Serial.println(" " + firstAdr);
-      Serial.print(secondSignalStr.toInt());   Serial.println(" " + secondAdr);
+    //    String scanStr =  bluetooth.readString();
+    //    Serial.println(scanStr);
+    ss = bluetooth.readString();
+    if (ss.indexOf(mac) > 0) {
+      scanned = true;
+    } else {
+      Serial.println("No mac");
     }
+    Serial.println(ss);
+    //for future
+    //    int firstIdx = scanStr.indexOf(':');
+    //    int ffdx = firstIdx + 67;
+    //    int fldx =  ffdx + 4;
+    //    //firstSignalStr = scanStr.substring(ffdx, fldx);
+    //    firstAdr = scanStr.substring(ffdx - 13, fldx - 5);
+    //
+    //    int secondIdx = scanStr.indexOf(':', fldx);
+    //    int sfdx = secondIdx + 67;
+    //    int sldx = sfdx + 4;
+    //    //secondSignalStr = scanStr.substring(sfdx, sldx );
+    //    secondAdr = scanStr.substring(sfdx - 13, sldx - 5);
+    //    scanStr = "";
+    //    if (debug) {
+    //Serial.println(scanStr);
+    //      10 ^ ((-69 – (-60))/(10 * 2))
+    //      /double meters = pow(10, ((-60 - firstSignalStr.toInt()) / (10 * 2)));
+    //     / Serial.println(firstAdr);
+    //      /Serial.println(secondAdr);
+    //      Serial.print(firstSignalStr.toInt()); Serial.println(" " + firstAdr);
+    //      Serial.print(secondSignalStr.toInt());   Serial.println(" " + secondAdr);
+    //    }
 
+  }
+
+}
+
+//for pmj test only
+void connectoMac(String mess, String mac) {
+  if (mess.indexOf(mac) > 0) {
+    Serial.println("Has mac");
+
+    connected = connect(mac);
+    connected = connect(mac);
+    scanned = connected;
+  } else {
+    Serial.println("No mac");
 
   }
 }
-
 
 void loop()
 {
-
-if(scanned && connected){
-  while(bluetooth.available()){
-    Serial.println(bluetooth.readString());
-  }
-}
-
-  boolean needFirst = firstSignalStr.toInt() != 0 && firstSignalStr.toInt() > -45;
-  boolean needSecond = secondSignalStr.toInt() != 0 && secondSignalStr.toInt() > -45;
-  if (needFirst || needSecond) {
-    scanned = true;
-  }
-
-  if (scanned && !connected) {
-
-    if (needFirst) {
-      connected = connect(firstAdr);
-
-    } else if (needSecond) {
-      connected = connect(secondAdr);
+  if (scanned && connected) {
+    while (bluetooth.available()) {
+      Serial.println(bluetooth.readString());
     }
   }
 
-
-
-
-  //  if (scanned == true && connected == false) {
-  //
-  //    for (int idx ; idx < 2; idx++) {
-  //      if (signals[idx] > -50) {
-  //        if (idx == 1) {
-  //          connected = connect(firstAdr);
-  //        } else {
-  //          connected = connect(secondAdr);
-  //        }
-  //      }
-  //
-  //    }
-  //
-  //    delay(200);
+  //todo need to check, work not correctly sometimes
+  //  boolean needFirst = firstSignalStr.toInt() != 0 && firstSignalStr.toInt() > -45;
+  //  boolean needSecond = secondSignalStr.toInt() != 0 && secondSignalStr.toInt() > -45;
+  //  if (needFirst || needSecond) {
+  //    scanned = true;
   //  }
 
-  if (!connected && !scanned) {
+  if (scanned && !connected) {
+    connected = connect(mac);
+  }
+
+
+
+  //commit for pmj test
+  //
+  //  if (scanned && !connected) {
+  //
+  //    if (needFirst) {
+  //      connected = connect(firstAdr);
+  //
+  //    } else if (needSecond) {
+  //      connected = connect(secondAdr);
+  //    }
+  //  }
+
+
+  if (!scanned) {
     scan();
   }
 
 
-  //    int signalPower = firstSignal.toInt();
-
-  //    if (signalPower > -65) {
-  //      if (debug) {
-  //        String mac = message.substring(lastSigIdx - 17, lastSigIdx - 5);
-  //        Serial.println(mac);
-  //        Serial.println(signalPower);
-  //      }
+  //todo check this and maby implement this to STM32 or bigger chip
+  //  if (connected && scanned) {
+  //
+  //    bluetooth.write("AT+RSSI?");
   //
   //
+  //    delay(500);
+  //    while (bluetooth.available()) {
+  //      Serial.println("RSSI " + bluetooth.readString());
   //    }
-
-
-
-
+  //  }
+  //
+  //
+  //  if (connected) {
+  //    connected = hasBLEConnected();
+  //    scanned = connected;
+  //
+  //    if (connected) {
+  //      bluetooth.write("AT+MEAS?");
+  //      delay(500);
+  //      while (bluetooth.available()) {
+  //        Serial.println("Distance is: " + bluetooth.readString());
+  //      }
+  //    }
+  //
+  //  }
+  //
+  //  if (scanned == true && connected == false) {
+  //    //    if (debug) {
+  //    //      Serial.print("scanned "); Serial.println(scanned, DEC);
+  //    //      Serial.print("connected "); Serial.println(connected, DEC);
+  //    //    }
+  //    connected = connect();
+  //    delay(500);
+  //  }
+  //
+  //  if (scanned == false) {
+  //    scanned = scanDevice();
+  //    delay(300);
+  //  }
 
 }
-
-
-//  if (bluetooth.available()) {
-//    String message = bluetooth.readString();
-//    if (debug) {
-//      Serial.println(message);
-//    }
-//  }
-//
-//
-//  if (connected) {
-//    connected = hasBLEConnected();
-//    scanned = connected;
-//
-//    if (connected) {
-//      bluetooth.write("AT+MEAS?");
-//      delay(500);
-//      while (bluetooth.available()) {
-//        Serial.println("Distance is: " + bluetooth.readString());
-//      }
-//    }
-//
-//  }
-//
-//  if (scanned == true && connected == false) {
-//    //    if (debug) {
-//    //      Serial.print("scanned "); Serial.println(scanned, DEC);
-//    //      Serial.print("connected "); Serial.println(connected, DEC);
-//    //    }
-//    connected = connect();
-//    delay(500);
-//  }
-//
-//  if (scanned == false) {
-//    scanned = scanDevice();
-//    delay(300);
-//  }
-
-
 
